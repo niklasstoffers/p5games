@@ -1,0 +1,26 @@
+{
+  "name": "p5games",
+  "version": "1.0.0",
+  "description": "",
+  "homepage": "https://github.com/niklasstoffers/p5games#readme",
+  "bugs": {
+    "url": "https://github.com/niklasstoffers/p5games/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/niklasstoffers/p5games.git"
+  },
+  "license": "MIT",
+  "author": "Niklas Stoffers",
+  "workspaces": [
+    "games/*"
+  ],
+  "devDependencies": {
+    "@types/p5": "^1.7.6",
+    "typescript": "^5.0.0",
+    "vite": "^5.0.0"
+  },
+  "scripts": {
+    "snake": "vite games/snake"
+  }
+}
