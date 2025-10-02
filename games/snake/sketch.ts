@@ -1,8 +1,8 @@
+const NUM_TILES = 30;
+
 const SIZE = window.innerWidth;
 const SKETCH_SCALE = 0.5;
 const SKETCH_SIZE = SIZE * SKETCH_SCALE;
-
-const NUM_TILES = 30;
 const TILE_SIZE = SKETCH_SIZE / NUM_TILES;
 
 const BACKGROUND_COLOR = '#000';
@@ -27,7 +27,7 @@ let lastMoveTime = 0;
 
 function setup() {
     createCanvas(SKETCH_SIZE, SKETCH_SIZE);
-    loadInitialState();
+    reset();
 }
 
 function draw() {
@@ -86,10 +86,6 @@ function keyPressed() {
 
 function reset() {
     isRunning = false;
-    loadInitialState();
-}
-
-function loadInitialState() {
     direction = new p5.Vector(1, 0);
     initSnake();
     apple = generateApplePosition();
