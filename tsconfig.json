@@ -11,9 +11,5 @@
     "paths": {
       "*": ["node_modules/*"]
     }
-  },
-  "include": [
-    "games/**/*",
-    "global.d.ts"
-  ]
+  }
 }
