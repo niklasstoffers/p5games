@@ -21,6 +21,7 @@
     "vite": "^5.0.0"
   },
   "scripts": {
-    "snake": "vite games/snake"
+    "snake": "vite games/snake",
+    "pong": "vite games/pong"
   }
 }
