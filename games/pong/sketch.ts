@@ -32,6 +32,7 @@ const SKETCH_CENTER_LINE_SEGMENT_SIZE = SKETCH_CENTER_LINE_HEIGHT / (2 * SKETCH_
 
 const SKETCH_COLLISION_BOUNDARY_Y_MIN = SKETCH_BOUNDARIES_OFFSET_Y + SKETCH_BOUNDARIES_HEIGHT;
 const SKETCH_COLLISION_BOUNDARY_Y_MAX = SKETCH_HEIGHT - SKETCH_COLLISION_BOUNDARY_Y_MIN;
+const SKETCH_COLLISION_BOUNDARY_HEIGHT = SKETCH_COLLISION_BOUNDARY_Y_MAX - SKETCH_COLLISION_BOUNDARY_Y_MIN;
 
 const SCORE_TEXT_SIZE_FACTOR = 0.1;
 const SCORE_TEXT_OFFSET_CENTER_X_FACTOR = 0.1;
@@ -58,6 +59,8 @@ const BALL_START_ANGLE_MAX = Math.PI / 4;
 const STICKY_COLLISION_EPSILON = 1;
 const PADDLE_VELOCITY_COLLISION_INFLUENCE = 0.2;
 
+const COM_PADDLE_CENTER_DELTA = 5;
+
 const MAX_SCORE = 9;
 
 const FONT = 'Press Start 2P';
@@ -72,19 +75,18 @@ interface Rect {
 }
 
 interface ComConfig {
-    reactionTimeMs: number;
+    reactionTime: { min: number, max: number };
     paddleSpeed: number;
     errorMargin: number;
-    paddleCenterHitRatio: number;
 }
 
 type ComDifficulty = 'easy' | 'medium' | 'hard';
 const COM_DIFFICULTY: ComDifficulty = 'medium';
 
 const COM_DIFFICULTY_SETTINGS: Map<ComDifficulty, ComConfig> = new Map([
-    ['easy', { reactionTimeMs: 500, paddleSpeed: 0.6, errorMargin: 50, paddleCenterHitRatio: 0.2 }],
-    ['medium', { reactionTimeMs: 1000, paddleSpeed: 0.8, errorMargin: 20, paddleCenterHitRatio: 0.5 }],
-    ['hard', { reactionTimeMs: 2000, paddleSpeed: 1.0, errorMargin: 5, paddleCenterHitRatio: 0.7 }]
+    ['easy', { reactionTime: { min: 50, max: 150 }, paddleSpeed: 0.4, errorMargin: 0.13 * SKETCH_SIZE }],
+    ['medium', { reactionTime: { min: 150, max: 250 }, paddleSpeed: 0.6, errorMargin: 0.1 * SKETCH_SIZE }],
+    ['hard', { reactionTime: { min: 200, max: 300 }, paddleSpeed: 0.7, errorMargin: 0.02 * SKETCH_SIZE }]
 ]);
 
 let isRunning = false;
@@ -95,6 +97,8 @@ let ballVector: p5.Vector;
 let playerScore = 0;
 let comScore = 0;
 let comConfig = COM_DIFFICULTY_SETTINGS.get(COM_DIFFICULTY)!;
+let currentComReactionTime: number;
+let currentComErrorMargin: number;
 
 function setup() {
     createCanvas(SKETCH_WIDTH, SKETCH_HEIGHT);
@@ -171,6 +175,7 @@ function reset() {
     comPaddle = getInitialPaddlePos('com');
     ball = getInitialBallPos();
     ballVector = getRandomBallVector();
+    comSetParameters();
 }
 
 function getInitialPaddlePos(type: 'com' | 'player') : Rect {
@@ -213,8 +218,10 @@ function moveBall() {
 function handleBallCollisions() {
     if (intersects(ball, playerPaddle))
         handlePaddleCollision(playerPaddle, getNormalizedPlayerMovementVector());
-    else if (intersects(ball, comPaddle))
+    else if (intersects(ball, comPaddle)) {
         handlePaddleCollision(comPaddle, getNormalizedComMovementVector());
+        comSetParameters();
+    }
     
     if (ballHitLine('top') || ballHitLine('bottom'))
         ballVector.y *= -1;
@@ -292,28 +299,41 @@ function getNormalizedPlayerMovementVector() : p5.Vector {
 }
 
 function getNormalizedComMovementVector(): p5.Vector {
-    let timeUntilHit = getTimeUntilComHitMs();
-    if (ballVector.x < 0 || timeUntilHit > comConfig.reactionTimeMs)
-        return new p5.Vector(0, 0);
+    let timeUntilHit = getTimeUntilComHit();
+    let predictedY = comPredictBallImpactY()!;
+    let dy = predictedY - (comPaddle.y + comPaddle.h / 2) + currentComErrorMargin;
 
-    let predictedY = predictComImpactY();
-    let relativeIntersectY = predictedY - (comPaddle.y + comPaddle.h / 2);
-    let hitAreaCenterOffset = comConfig.paddleCenterHitRatio * comPaddle.h / 2;
-    if (relativeIntersectY < -hitAreaCenterOffset)
-        return new p5.Vector(0, -1);
-    else if (relativeIntersectY > hitAreaCenterOffset)
-        return new p5.Vector(0, 1);
+    if (isBallFlyingTowardsPaddle(comPaddle) && timeUntilHit < currentComReactionTime && Math.abs(dy) >= COM_PADDLE_CENTER_DELTA)
+        return new p5.Vector(0, dy).normalize();
+    
     return new p5.Vector(0, 0);
 }
 
-function getTimeUntilComHitMs() : number {
-    return Math.abs(comPaddle.x - (ball.x + ball.w)) / (Math.abs(ballVector.x) * BALL_SPEED);
+function getTimeUntilComHit() : number {
+    return comPaddle.x - (ball.x + ball.w) / (ballVector.x * BALL_SPEED);
 }
 
-function predictComImpactY() : number {
-    let timeUntilHit = getTimeUntilComHitMs();
-    let randomError = random(-comConfig.errorMargin, comConfig.errorMargin);
-    return ball.y + ballVector.y * BALL_SPEED * timeUntilHit + randomError;
+function comPredictBallImpactY() : number {
+    let dx = comPaddle.x - ball.x - ball.w;
+    let t = dx / (ballVector.x * BALL_SPEED);
+    let relativeY = ball.y - SKETCH_COLLISION_BOUNDARY_Y_MIN;
+    let rawY = relativeY + ballVector.y * t * BALL_SPEED;
+    let bouncePeriodY = 2 * (SKETCH_COLLISION_BOUNDARY_HEIGHT - ball.h);
+    let modY = ((rawY % bouncePeriodY) + bouncePeriodY) % bouncePeriodY;
+
+    if (modY > SKETCH_COLLISION_BOUNDARY_HEIGHT - ball.h)
+        return bouncePeriodY - modY + SKETCH_COLLISION_BOUNDARY_Y_MIN;
+    return modY + SKETCH_COLLISION_BOUNDARY_Y_MIN;
+}
+
+function comSetParameters() {
+    currentComReactionTime = random(comConfig.reactionTime.min, comConfig.reactionTime.max);
+    currentComErrorMargin = random(-comConfig.errorMargin, comConfig.errorMargin);
+}
+
+function isBallFlyingTowardsPaddle(paddle: Rect) : boolean {
+    return (ballVector.x < 0 && ball.x - paddle.x - paddle.w > 0)
+        || (ballVector.x > 0 && paddle.x - ball.x - ball.w > 0);
 }
 
 function intersects(first: Rect, second: Rect) : boolean {
