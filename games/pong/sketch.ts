@@ -15,8 +15,27 @@ const PADDLE_OFFSET_X = SKETCH_SIZE * PADDLE_OFFSET_SCALE_X;
 const BALL_SCALE = 0.025;
 const BALL_SIZE = SKETCH_SIZE * BALL_SCALE;
 
+const SKETCH_BOUNDARIES_OFFSET_SCALE_Y = 0.02;
+const SKETCH_BOUNDARIES_OFFSET_SCALE_X = 0.02;
+const SKETCH_BOUNDARIES_HEIGHT_SCALE = 0.02;
+const SKETCH_BOUNDARIES_OFFSET_Y = SKETCH_SIZE * SKETCH_BOUNDARIES_OFFSET_SCALE_Y;
+const SKETCH_BOUNDARIES_OFFSET_X = SKETCH_SIZE * SKETCH_BOUNDARIES_OFFSET_SCALE_X;
+const SKETCH_BOUNDARIES_HEIGHT = SKETCH_SIZE * SKETCH_BOUNDARIES_HEIGHT_SCALE;
+const SKETCH_BOUNDARIES_WIDTH = SKETCH_WIDTH - 2 * SKETCH_BOUNDARIES_OFFSET_X;
+
+const SKETCH_CENTER_LINE_THICKNESS_SCALE = 0.01;
+const SKETCH_CENTER_LINE_NUM_SEGMENTS = 8;
+const SKETCH_CENTER_LINE_THICKNESS = SKETCH_SIZE * SKETCH_CENTER_LINE_THICKNESS_SCALE;
+const SKETCH_CENTER_LINE_OFFSET_Y = SKETCH_BOUNDARIES_OFFSET_Y + 2 * SKETCH_BOUNDARIES_HEIGHT;
+const SKETCH_CENTER_LINE_HEIGHT = SKETCH_HEIGHT - 2 * SKETCH_CENTER_LINE_OFFSET_Y;
+const SKETCH_CENTER_LINE_SEGMENT_SIZE = SKETCH_CENTER_LINE_HEIGHT / (2 * SKETCH_CENTER_LINE_NUM_SEGMENTS);
+
+const SKETCH_COLLISION_BOUNDARY_Y_MIN = SKETCH_BOUNDARIES_OFFSET_Y + SKETCH_BOUNDARIES_HEIGHT;
+const SKETCH_COLLISION_BOUNDARY_Y_MAX = SKETCH_HEIGHT - SKETCH_COLLISION_BOUNDARY_Y_MIN;
+
 const BACKGROUND_COLOR = '#000';
-const PADDLE_COLOR = '#FFF';
+const FOREGROUND_COLOR = '#FFF';
+const SECONDARY_FOREGROUND_COLOR = '#CCC';
 
 const START_KEY = ' ';
 const KEY_UP = 'w';
@@ -64,6 +83,7 @@ let ballVector: p5.Vector;
 
 function setup() {
     createCanvas(SKETCH_WIDTH, SKETCH_HEIGHT);
+    strokeCap(SQUARE);
     reset();
 }
 
@@ -87,8 +107,19 @@ function update() {
 function render() {
     background(BACKGROUND_COLOR);
 
-    fill(PADDLE_COLOR);
-    stroke(PADDLE_COLOR);
+    stroke(SECONDARY_FOREGROUND_COLOR);
+    fill(SECONDARY_FOREGROUND_COLOR);
+    rect(SKETCH_BOUNDARIES_OFFSET_X, SKETCH_BOUNDARIES_OFFSET_Y, SKETCH_BOUNDARIES_WIDTH, SKETCH_BOUNDARIES_HEIGHT);
+    rect(SKETCH_BOUNDARIES_OFFSET_X, SKETCH_HEIGHT - SKETCH_BOUNDARIES_OFFSET_Y - SKETCH_BOUNDARIES_HEIGHT, SKETCH_BOUNDARIES_WIDTH, SKETCH_BOUNDARIES_HEIGHT);
+
+    drawingContext.setLineDash([SKETCH_CENTER_LINE_SEGMENT_SIZE, SKETCH_CENTER_LINE_SEGMENT_SIZE]);
+    strokeWeight(SKETCH_CENTER_LINE_THICKNESS);
+    line(SKETCH_WIDTH / 2, SKETCH_CENTER_LINE_OFFSET_Y + SKETCH_CENTER_LINE_SEGMENT_SIZE / 2, SKETCH_WIDTH / 2, SKETCH_HEIGHT - SKETCH_CENTER_LINE_OFFSET_Y + SKETCH_CENTER_LINE_SEGMENT_SIZE / 2);
+    strokeWeight(1);
+    drawingContext.setLineDash([]);
+
+    fill(FOREGROUND_COLOR);
+    stroke(FOREGROUND_COLOR);
     rect(playerPaddle.x, playerPaddle.y, playerPaddle.w, playerPaddle.h);
     rect(comPaddle.x, comPaddle.y, comPaddle.w, comPaddle.h);
     rect(ball.x, ball.y, ball.w, ball.h);
@@ -133,14 +164,14 @@ function getRandomBallVector() : p5.Vector {
 function movePaddle(paddle: Rect, vector: p5.Vector, speed: number) {
     let speedVector = new p5.Vector(0, speed * deltaTime);
     speedVector.mult(vector);
-    paddle.y = clampVal(paddle.y + speedVector.y, 0, SKETCH_HEIGHT - PADDLE_HEIGHT);
+    paddle.y = clampVal(paddle.y + speedVector.y, SKETCH_COLLISION_BOUNDARY_Y_MIN, SKETCH_COLLISION_BOUNDARY_Y_MAX - PADDLE_HEIGHT);
 }
 
 function moveBall() {
     let speedVector = new p5.Vector(BALL_SPEED * deltaTime, BALL_SPEED * deltaTime);
     speedVector.mult(ballVector);
     ball.x = clampVal(ball.x + speedVector.x, 0, SKETCH_WIDTH - BALL_SIZE);
-    ball.y = clampVal(ball.y + speedVector.y, 0, SKETCH_HEIGHT - BALL_SIZE);
+    ball.y = clampVal(ball.y + speedVector.y, SKETCH_COLLISION_BOUNDARY_Y_MIN, SKETCH_COLLISION_BOUNDARY_Y_MAX - BALL_SIZE);
 }
 
 function handleBallCollisions() {
@@ -192,7 +223,7 @@ function bounce(bounceAngle: number) {
 }
 
 function ballHitLine(type: 'horizontal' | 'vertical') : boolean {
-    return (type == 'horizontal' && (ball.y <= 0 || ball.y + ball.h >= SKETCH_HEIGHT))
+    return (type == 'horizontal' && (ball.y <= SKETCH_COLLISION_BOUNDARY_Y_MIN || ball.y + ball.h >= SKETCH_COLLISION_BOUNDARY_Y_MAX))
         || (type == 'vertical' && (ball.x <= 0 || ball.x + ball.w >= SKETCH_WIDTH));
 }
 
