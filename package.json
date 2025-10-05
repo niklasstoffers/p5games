@@ -22,6 +22,7 @@
   },
   "scripts": {
     "snake": "vite games/snake",
-    "pong": "vite games/pong"
+    "pong": "vite games/pong",
+    "flappy-bird": "vite games/flappy-bird"
   }
 }
