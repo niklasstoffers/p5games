@@ -9,7 +9,12 @@ const BIRD_RATIO = 0.7;
 const BIRD_WIDTH = SKETCH_WIDTH * BIRD_SIZE_SCALE;
 const BIRD_HEIGHT = BIRD_WIDTH * BIRD_RATIO;
 
+const BASE_RATIO = 1/3;
+const BASE_WIDTH = SKETCH_WIDTH;
+const BASE_HEIGHT = BASE_WIDTH * BASE_RATIO;
+
 const BACKGROUND_IMAGE_PATH = '/assets/background.png';
+const BASE_IMAGE_PATH = '/assets/base.png';
 const BIRD_IMAGE_DOWNFLAP_PATH = '/assets/bird-downflap.png';
 const BIRD_IAMGE_MIDFLAP_PATH = '/assets/bird-midflap.png';
 const BIRD_IMAGE_UPFLAP_PATH = '/assets/bird-upflap.png';
@@ -36,12 +41,14 @@ interface Rect {
     h: number
 }
 
-let isRunning = false;
 let backgroundImg: p5.Image;
+let baseImg: p5.Image;
 let birdFrames: p5.Image[] = [];
-let bird: Rect;
 let currentBirdAnimationFrame = 0;
 let lastBirdAnimationFrameChange = 0;
+
+let isRunning = false;
+let bird: Rect;
 let fallDuration = 0;
 let jumpVelocity = 0;
 let lastJump = 0;
@@ -49,6 +56,7 @@ let birdAngle = 0;
 
 async function loadAssets() {
     backgroundImg = await loadImage(BACKGROUND_IMAGE_PATH);
+    baseImg = await loadImage(BASE_IMAGE_PATH);
     birdFrames[0] = await loadImage(BIRD_IMAGE_DOWNFLAP_PATH);
     birdFrames[1] = await loadImage(BIRD_IAMGE_MIDFLAP_PATH);
     birdFrames[2] = await loadImage(BIRD_IMAGE_UPFLAP_PATH);
@@ -101,6 +109,7 @@ function updateBirdAnimation() {
 
 function render() {
     image(backgroundImg, 0, 0, SKETCH_WIDTH, SKETCH_HEIGHT);
+    image(baseImg, 0, SKETCH_HEIGHT - BASE_HEIGHT, BASE_WIDTH, BASE_HEIGHT);
 
     push();
     translate(bird.x + bird.w / 2, bird.y + bird.h / 2);
@@ -147,5 +156,5 @@ function getInitialBirdPosition() : Rect {
 
 function hitWall(type: 'top' | 'bottom') : boolean {
     return (type == 'top' && bird.y < 0)
-        || (type == 'bottom' && bird.y + bird.h > SKETCH_HEIGHT);
+        || (type == 'bottom' && bird.y + bird.h + BASE_HEIGHT > SKETCH_HEIGHT);
 }
