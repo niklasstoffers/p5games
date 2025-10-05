@@ -4,10 +4,12 @@ const SKETCH_RATIO_WIDTH = 0.5625;
 const SKETCH_HEIGHT = SIZE * SKETCH_SCALE_HEIGHT;
 const SKETCH_WIDTH = SKETCH_HEIGHT * SKETCH_RATIO_WIDTH;
 
-const BIRD_SIZE_SCALE = 0.15;
+const BIRD_SIZE_SCALE = 0.13;
+const BIRD_OFFSET_X_SCALE = 0.1;
 const BIRD_RATIO = 0.7;
 const BIRD_WIDTH = SKETCH_WIDTH * BIRD_SIZE_SCALE;
 const BIRD_HEIGHT = BIRD_WIDTH * BIRD_RATIO;
+const BIRD_OFFSET_X = SKETCH_WIDTH * BIRD_OFFSET_X_SCALE;
 
 const BASE_RATIO = 1/3;
 const BASE_WIDTH = SKETCH_WIDTH;
@@ -26,6 +28,10 @@ const SIMULATION_FACTOR = SKETCH_HEIGHT / SIMULATION_REFERENCE_HEIGHT;
 const GRAVITY = 3 * SIMULATION_FACTOR;
 const JUMP_VELOCITY = -0.8 * SIMULATION_FACTOR;
 const TERMINAL_VELOCITY = 1.2 * SIMULATION_FACTOR;
+
+const BASE_SPEED = 150;
+const SPEED_INCREASE = 0.001;
+const MAX_SPEED = 300;
 
 const BIRD_MAX_ROTATION_ANGLE = Math.PI / 4;
 
@@ -53,6 +59,8 @@ let fallDuration = 0;
 let jumpVelocity = 0;
 let lastJump = 0;
 let birdAngle = 0;
+let totalSimulationTime = 0;
+let backgroundOffsetX = 0;
 
 async function loadAssets() {
     backgroundImg = await loadImage(BACKGROUND_IMAGE_PATH);
@@ -73,11 +81,13 @@ function draw() {
     if (isRunning)
         update();
         
+    backgroundOffsetX -= getCurrentSpeed() * (deltaTime / 1000);
     updateBirdAnimation();
     render();
 }
 
 function update() {
+    totalSimulationTime += deltaTime;
     fallDuration += deltaTime;
     bird.y += getCurrentBirdVelocity() * deltaTime;
 
@@ -108,8 +118,13 @@ function updateBirdAnimation() {
 }
 
 function render() {
+    push();
+    translate(backgroundOffsetX % SKETCH_WIDTH, 0);
     image(backgroundImg, 0, 0, SKETCH_WIDTH, SKETCH_HEIGHT);
+    image(backgroundImg, SKETCH_WIDTH, 0, SKETCH_WIDTH, SKETCH_HEIGHT);
     image(baseImg, 0, SKETCH_HEIGHT - BASE_HEIGHT, BASE_WIDTH, BASE_HEIGHT);
+    image(baseImg, SKETCH_WIDTH, SKETCH_HEIGHT - BASE_HEIGHT, BASE_WIDTH, BASE_HEIGHT);
+    pop();
 
     push();
     translate(bird.x + bird.w / 2, bird.y + bird.h / 2);
@@ -140,6 +155,7 @@ function reset() {
     jumpVelocity = 0;
     lastJump = 0;
     birdAngle = 0;
+    totalSimulationTime = 0;
     currentBirdAnimationFrame = 0;
     lastBirdAnimationFrameChange = 0;
     bird = getInitialBirdPosition();
@@ -147,8 +163,8 @@ function reset() {
 
 function getInitialBirdPosition() : Rect {
     return { 
-        x: SKETCH_WIDTH / 2 - BIRD_WIDTH / 2, 
-        y: SKETCH_HEIGHT / 2 - BIRD_HEIGHT / 2,
+        x: BIRD_OFFSET_X, 
+        y: (SKETCH_HEIGHT - BASE_HEIGHT) / 2 - BIRD_HEIGHT / 2,
         w: BIRD_WIDTH,
         h: BIRD_HEIGHT
     };
@@ -157,4 +173,8 @@ function getInitialBirdPosition() : Rect {
 function hitWall(type: 'top' | 'bottom') : boolean {
     return (type == 'top' && bird.y < 0)
         || (type == 'bottom' && bird.y + bird.h + BASE_HEIGHT > SKETCH_HEIGHT);
+}
+
+function getCurrentSpeed() : number {
+    return Math.min(MAX_SPEED, BASE_SPEED + totalSimulationTime * SPEED_INCREASE);
 }
