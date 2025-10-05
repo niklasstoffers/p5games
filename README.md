@@ -16,7 +16,7 @@ To run a game, run:
 $ npm run <game>
 ```
 
-where `<game>` is one of the following game names: `snake, pong`
+where `<game>` is one of the following game names: `snake, pong, flappy-bird`
 
 ## Games
 
@@ -27,3 +27,7 @@ where `<game>` is one of the following game names: `snake, pong`
 ### Pong
 
 ![Pong Demo](./img/pong.gif)
+
+### Flappy Bird
+
+![Flappy Bird Demo](./img/flappy-bird.gif)
