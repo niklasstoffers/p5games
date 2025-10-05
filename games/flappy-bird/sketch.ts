@@ -20,7 +20,7 @@ const PIPE_RATIO = 6.2;
 const PIPE_WIDTH = SKETCH_WIDTH * PIPE_WIDTH_SCALE;
 const PIPE_HEIGHT = PIPE_WIDTH * PIPE_RATIO;
 
-const PIPE_GAP_SCALE = 0.35;
+const PIPE_GAP_SCALE = 0.38;
 const PIPE_DISTANCE_MIN_SCALE = 0.5;
 const PIPE_DISTANCE_MAX_SCALE = 0.9;
 const PIPE_OFFSET_Y_MIN_SCALE = 0.1;
@@ -30,12 +30,24 @@ const PIPE_DISTANCE_MAX = SKETCH_WIDTH * PIPE_DISTANCE_MAX_SCALE;
 const PIPE_OFFSET_Y_MIN = SKETCH_HEIGHT * PIPE_OFFSET_Y_MIN_SCALE;
 const PIPE_OFFSET_Y_MAX = SKETCH_HEIGHT - BASE_HEIGHT - PIPE_OFFSET_Y_MIN - PIPE_GAP;
 
+const START_SCREEN_SIZE_SCALE = 0.7;
+const START_SCREEN_RATIO = 1.46;
+const START_SCREEN_WIDTH = SKETCH_WIDTH * START_SCREEN_SIZE_SCALE;
+const START_SCREEN_HEIGHT = START_SCREEN_WIDTH * START_SCREEN_RATIO;
+
+const GAME_OVER_SCREEN_SIZE_SCALE = 0.7;
+const GAME_OVER_SCREEN_RATIO = 0.22;
+const GAME_OVER_SCREEN_WIDTH = SKETCH_WIDTH * GAME_OVER_SCREEN_SIZE_SCALE;
+const GAME_OVER_SCREEN_HEIGHT = GAME_OVER_SCREEN_WIDTH * GAME_OVER_SCREEN_RATIO;
+
 const BACKGROUND_IMAGE_PATH = '/assets/background.png';
 const BASE_IMAGE_PATH = '/assets/base.png';
 const PIPE_IMAGE_PATH = '/assets/pipe.png';
 const BIRD_IMAGE_DOWNFLAP_PATH = '/assets/bird-downflap.png';
 const BIRD_IAMGE_MIDFLAP_PATH = '/assets/bird-midflap.png';
 const BIRD_IMAGE_UPFLAP_PATH = '/assets/bird-upflap.png';
+const START_SCREEN_IMAGE_PATH = '/assets/start-message.png';
+const GAME_OVER_SCREEN_IMAGE_PATH = '/assets/gameover.png';
 
 const BIRD_ANIMATION_FRAME_DURATION = 100;
 
@@ -43,7 +55,7 @@ const SIMULATION_REFERENCE_HEIGHT = 500;
 const SIMULATION_FACTOR = SKETCH_HEIGHT / SIMULATION_REFERENCE_HEIGHT;
 const GRAVITY = 2 * SIMULATION_FACTOR;
 const JUMP_VELOCITY = -0.5 * SIMULATION_FACTOR;
-const TERMINAL_VELOCITY = 0.8 * SIMULATION_FACTOR;
+const TERMINAL_VELOCITY = 0.7 * SIMULATION_FACTOR;
 
 const BASE_SPEED = 150;
 const SPEED_INCREASE = 0.001;
@@ -67,10 +79,13 @@ let backgroundImg: p5.Image;
 let baseImg: p5.Image;
 let pipeImg: p5.Image;
 let birdFrames: p5.Image[] = [];
+let startScreenImg: p5.Image;
+let gameOverScreenImg: p5.Image;
 let currentBirdAnimationFrame = 0;
 let lastBirdAnimationFrameChange = 0;
 
 let isRunning = false;
+let isGameOver = false;
 let bird: Rect;
 let pipes: Rect[];
 let fallDuration = 0;
@@ -88,6 +103,8 @@ async function loadAssets() {
     birdFrames[1] = await loadImage(BIRD_IAMGE_MIDFLAP_PATH);
     birdFrames[2] = await loadImage(BIRD_IMAGE_UPFLAP_PATH);
     birdFrames[3] = await loadImage(BIRD_IAMGE_MIDFLAP_PATH);
+    startScreenImg = await loadImage(START_SCREEN_IMAGE_PATH);
+    gameOverScreenImg = await loadImage(GAME_OVER_SCREEN_IMAGE_PATH);
 }
 
 async function setup() {
@@ -113,7 +130,7 @@ function update() {
     updatePipes();
 
     if (hitWall('bottom') || hitPipe())
-        reset();
+        gameOver();
     else if (hitWall('top'))
         bird.y = 0;
 }
@@ -171,9 +188,16 @@ function updateBirdAnimation() {
 
 function render() {    
     renderBackground();
-    renderPipes();
-    renderBird();
+    if (isRunning) {
+        renderPipes();
+        renderBird();
+    }
     renderBase();
+
+    if (!isRunning && !isGameOver)
+        renderStartScreen();
+    if (isGameOver)
+        renderGameOverScreen();
 }
 
 function renderBackground() {
@@ -219,7 +243,21 @@ function renderBird() {
     pop();
 }
 
+function renderStartScreen() {
+    image(startScreenImg, SKETCH_WIDTH / 2 - START_SCREEN_WIDTH / 2, SKETCH_HEIGHT / 2 - START_SCREEN_HEIGHT / 2, START_SCREEN_WIDTH, START_SCREEN_HEIGHT);
+}
+
+function renderGameOverScreen() {
+    image(gameOverScreenImg, SKETCH_WIDTH / 2 - GAME_OVER_SCREEN_WIDTH / 2, SKETCH_HEIGHT / 2 - GAME_OVER_SCREEN_HEIGHT / 2, GAME_OVER_SCREEN_WIDTH, GAME_OVER_SCREEN_HEIGHT);
+}
+
 function keyPressed() {
+    if (isGameOver) {
+        if (key == START_KEY)
+            reset();
+        return;
+    }
+
     let wasRunning = isRunning;
     isRunning = isRunning || (key == START_KEY);
     if (!wasRunning && isRunning) {
@@ -236,6 +274,7 @@ function keyPressed() {
 
 function reset() {
     isRunning = false;
+    isGameOver = false;
     fallDuration = 0;
     jumpVelocity = 0;
     lastJump = 0;
@@ -246,6 +285,11 @@ function reset() {
     backgroundOffsetX = 0;
     bird = getInitialBirdPosition();
     pipes = [];
+}
+
+function gameOver() {
+    isRunning = false;
+    isGameOver = true;
 }
 
 function getInitialBirdPosition() : Rect {
