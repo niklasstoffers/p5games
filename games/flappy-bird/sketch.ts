@@ -40,6 +40,13 @@ const GAME_OVER_SCREEN_RATIO = 0.22;
 const GAME_OVER_SCREEN_WIDTH = SKETCH_WIDTH * GAME_OVER_SCREEN_SIZE_SCALE;
 const GAME_OVER_SCREEN_HEIGHT = GAME_OVER_SCREEN_WIDTH * GAME_OVER_SCREEN_RATIO;
 
+const SCORE_TEXT_SIZE_SCALE = 0.03;
+const SCORE_TEXT_OFFSET_X_SCALE = 0.04;
+const SCORE_TEXT_OFFSET_Y_SCALE = 0.02;
+const SCORE_TEXT_SIZE = SKETCH_WIDTH * SCORE_TEXT_SIZE_SCALE;
+const SCORE_TEXT_OFFSET_X = SKETCH_WIDTH * SCORE_TEXT_OFFSET_X_SCALE;
+const SCORE_TEXT_OFFSET_Y = SKETCH_HEIGHT * SCORE_TEXT_OFFSET_Y_SCALE;
+
 const BACKGROUND_IMAGE_PATH = '/assets/background.png';
 const BASE_IMAGE_PATH = '/assets/base.png';
 const PIPE_IMAGE_PATH = '/assets/pipe.png';
@@ -68,6 +75,9 @@ const JUMP_TIME_DELTA = 100;
 const START_KEY = ' ';
 const JUMP_KEY = ' ';
 
+const FONT = 'Press Start 2P';
+const SCORE_TEXT_COLOR = '#ECECEC';
+
 interface Rect {
     x: number,
     y: number,
@@ -86,6 +96,7 @@ let lastBirdAnimationFrameChange = 0;
 
 let isRunning = false;
 let isGameOver = false;
+let score = 0;
 let bird: Rect;
 let pipes: Rect[];
 let fallDuration = 0;
@@ -110,6 +121,7 @@ async function loadAssets() {
 async function setup() {
     createCanvas(SKETCH_WIDTH, SKETCH_HEIGHT);
     await loadAssets();
+    textFont(FONT);
     reset();
 }
 
@@ -122,12 +134,16 @@ function draw() {
 }
 
 function update() {
+    let prevBackgroundOffsetX = backgroundOffsetX;
     totalSimulationTime += deltaTime;
     fallDuration += deltaTime;
     bird.y += getCurrentBirdVelocity() * deltaTime;
     backgroundOffsetX += getCurrentSpeed() * (deltaTime / 1000);
 
     updatePipes();
+
+    if (passedPipe(prevBackgroundOffsetX, backgroundOffsetX))
+        score++;
 
     if (hitWall('bottom') || hitPipe())
         gameOver();
@@ -198,6 +214,9 @@ function render() {
         renderStartScreen();
     if (isGameOver)
         renderGameOverScreen();
+
+    if (isRunning || isGameOver)
+        renderScore();
 }
 
 function renderBackground() {
@@ -243,6 +262,18 @@ function renderBird() {
     pop();
 }
 
+function renderScore() {
+    stroke(SCORE_TEXT_COLOR);
+    fill(SCORE_TEXT_COLOR);
+    textSize(SCORE_TEXT_SIZE);
+    const scoreText = `Score: ${score}`
+    
+    if (isGameOver)
+        text(scoreText, SKETCH_WIDTH / 2 - textWidth(scoreText) / 2, SKETCH_HEIGHT / 2 + GAME_OVER_SCREEN_HEIGHT / 2 + SCORE_TEXT_OFFSET_X + textAscent());
+    else
+        text(scoreText, SKETCH_WIDTH - SCORE_TEXT_OFFSET_X - textWidth(scoreText), SCORE_TEXT_OFFSET_Y + textAscent());
+}
+
 function renderStartScreen() {
     image(startScreenImg, SKETCH_WIDTH / 2 - START_SCREEN_WIDTH / 2, SKETCH_HEIGHT / 2 - START_SCREEN_HEIGHT / 2, START_SCREEN_WIDTH, START_SCREEN_HEIGHT);
 }
@@ -275,6 +306,7 @@ function keyPressed() {
 function reset() {
     isRunning = false;
     isGameOver = false;
+    score = 0;
     fallDuration = 0;
     jumpVelocity = 0;
     lastJump = 0;
@@ -315,6 +347,10 @@ function hitPipe() : boolean {
             pipe.y >= bird.y + bird.h
         )
     );
+}
+
+function passedPipe(prevX: number, x: number) : boolean {
+    return pipes.some(pipe => prevX + BIRD_OFFSET_X < pipe.x + pipe.w && x + BIRD_OFFSET_X >= pipe.x + pipe.w);
 }
 
 function getCurrentSpeed() : number {
