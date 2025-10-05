@@ -26,6 +26,7 @@ const BIRD_MAX_ROTATION_ANGLE = Math.PI / 4;
 
 const JUMP_TIME_DELTA = 100;
 
+const START_KEY = ' ';
 const JUMP_KEY = ' ';
 
 interface Rect {
@@ -35,6 +36,7 @@ interface Rect {
     h: number
 }
 
+let isRunning = false;
 let backgroundImg: p5.Image;
 let birdFrames: p5.Image[] = [];
 let bird: Rect;
@@ -56,16 +58,13 @@ async function loadAssets() {
 async function setup() {
     createCanvas(SKETCH_WIDTH, SKETCH_HEIGHT);
     await loadAssets();
-    bird = { 
-        x: SKETCH_WIDTH / 2 - BIRD_WIDTH / 2, 
-        y: SKETCH_HEIGHT / 2 - BIRD_HEIGHT / 2,
-        w: BIRD_WIDTH,
-        h: BIRD_HEIGHT
-    };
+    reset();
 }
 
 function draw() {
-    update();
+    if (isRunning)
+        update();
+        
     updateBirdAnimation();
     render();
 }
@@ -73,14 +72,19 @@ function draw() {
 function update() {
     fallDuration += deltaTime;
     bird.y += getCurrentBirdVelocity() * deltaTime;
+
+    if (hitWall('bottom'))
+        reset();
+    else if (hitWall('top'))
+        bird.y = 0;
 }
 
-function getCurrentBirdVelocity() {
+function getCurrentBirdVelocity() : number {
     const gVelocity = GRAVITY * (fallDuration / 1000);
     return Math.min(TERMINAL_VELOCITY, jumpVelocity + gVelocity);
 }
 
-function getBirdRotationAngle() {
+function getBirdRotationAngle() : number {
     const normalizedBirdVelocity = getCurrentBirdVelocity() / TERMINAL_VELOCITY;
     const squaredNormalizedVelocity = Math.pow(normalizedBirdVelocity, 2);
     const sign = Math.sign(normalizedBirdVelocity);
@@ -107,9 +111,41 @@ function render() {
 }
 
 function keyPressed() {
+    let wasRunning = isRunning;
+    isRunning = isRunning || (key == START_KEY);
+    if (!wasRunning && isRunning) {
+        wasRunning = true;
+        return;
+    }
+
     if (key == JUMP_KEY && millis() - lastJump > JUMP_TIME_DELTA) {
         jumpVelocity = JUMP_VELOCITY;
         fallDuration = 0;
         lastJump = millis();
     }
+}
+
+function reset() {
+    isRunning = false;
+    fallDuration = 0;
+    jumpVelocity = 0;
+    lastJump = 0;
+    birdAngle = 0;
+    currentBirdAnimationFrame = 0;
+    lastBirdAnimationFrameChange = 0;
+    bird = getInitialBirdPosition();
+}
+
+function getInitialBirdPosition() : Rect {
+    return { 
+        x: SKETCH_WIDTH / 2 - BIRD_WIDTH / 2, 
+        y: SKETCH_HEIGHT / 2 - BIRD_HEIGHT / 2,
+        w: BIRD_WIDTH,
+        h: BIRD_HEIGHT
+    };
+}
+
+function hitWall(type: 'top' | 'bottom') : boolean {
+    return (type == 'top' && bird.y < 0)
+        || (type == 'bottom' && bird.y + bird.h > SKETCH_HEIGHT);
 }
