@@ -37,33 +37,9 @@ const DIRECTION_KEY_MAP: { [key: string]: Direction } = {
     'd': 'right' 
 };
 
+type IndexTranslator = (index: number) => number;
+
 let board: number[];
-
-class BoardIndexer {
-    private direction: Direction;
-    private gridIndex: number;
-
-    constructor(direction: Direction, gridIndex: number) {
-        this.direction = direction;
-        this.gridIndex = gridIndex;
-    }
-
-    private calcIndex(index: number): number {
-        if (this.direction == 'left') return this.gridIndex * GRID_SIZE + index;
-        if (this.direction == 'right') return (this.gridIndex + 1) * GRID_SIZE - index - 1;
-        if (this.direction == 'up') return index * GRID_SIZE + this.gridIndex;
-        if (this.direction == 'down') return (GRID_SIZE - index - 1) * GRID_SIZE + this.gridIndex;
-        return 0;
-    }
-
-    get(index: number): number {
-        return board[this.calcIndex(index)];
-    }
-
-    set(index: number, val: number) {
-        board[this.calcIndex(index)] = val;
-    }
-}
 
 function setup() {
     createCanvas(SKETCH_SIZE, SKETCH_SIZE);
@@ -106,31 +82,28 @@ function reset() {
 
 function merge(direction: Direction) {
     for (let i = 0; i < GRID_SIZE; i++) {
-        const indexer = new BoardIndexer(direction, i);
-        shiftTogether(indexer);
-        mergeSingle(indexer);
-        shiftTogether(indexer);
+        const translator = getIndexTranslator(direction, i);
+        shiftTogether(translator);
+        mergeSingle(translator);
+        shiftTogether(translator);
     }
 }
 
-function mergeSingle(indexer: BoardIndexer) {
+function mergeSingle(translator: IndexTranslator) {
     for (let i = 0; i < GRID_SIZE - 1; i++) {
-        if (indexer.get(i) == indexer.get(i + 1) && indexer.get(i) != 0) {
-            indexer.set(i, indexer.get(i) * 2);
-            indexer.set(i + 1, 0);
+        if (board[translator(i)] == board[translator(i + 1)] && board[translator(i)] != 0) {
+            board[translator(i)] = board[translator(i)] * 2;
+            board[translator(i + 1)] = 0;
         }
     }
 }
 
-function shiftTogether(indexer: BoardIndexer) {
+function shiftTogether(translator: IndexTranslator) {
     let shiftIndex = 0;
     for (let i = 0; i < GRID_SIZE; i++) {
-        if (indexer.get(i) == 0)
+        if (board[translator(i)] == 0)
             continue;
-        if (shiftIndex != i) {
-            indexer.set(shiftIndex, indexer.get(i));
-            indexer.set(i, 0);
-        }        
+        [board[translator(shiftIndex)], board[translator(i)]] = [board[translator(i)], board[translator(shiftIndex)]];
         shiftIndex++;
     }
 }
@@ -149,4 +122,14 @@ function fillRandomTile() {
         boardIndex = floor(random(0, GRID_SIZE * GRID_SIZE));
     } while(board[boardIndex] != 0);
     board[boardIndex] = tileValue;
+}
+
+function getIndexTranslator(direction: Direction, indexBase: number): IndexTranslator {
+    return (index: number) => {
+        if (direction == 'left') return indexBase * GRID_SIZE + index;
+        if (direction == 'right') return (indexBase + 1) * GRID_SIZE - index - 1;
+        if (direction == 'up') return index * GRID_SIZE + indexBase;
+        if (direction == 'down') return (GRID_SIZE - index - 1) * GRID_SIZE + indexBase;
+        return 0;
+    };
 }
