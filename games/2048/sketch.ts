@@ -154,12 +154,10 @@ function generateBoard() {
 }
 
 function fillRandomTile() {
+    const freeTiles = board.map((v, i) => v == 0 ? i : -1).filter(i => i != -1);
     const tileValue = random() < PROBABILITY_FOUR_TILE ? 4 : 2;
-    let boardIndex = 0;
-    do {
-        boardIndex = floor(random(0, GRID_SIZE * GRID_SIZE));
-    } while(board[boardIndex] != 0);
-    board[boardIndex] = tileValue;
+    const index = random(freeTiles);
+    board[index] = tileValue;
 }
 
 function hasFreeTiles(): boolean {
