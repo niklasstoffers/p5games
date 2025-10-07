@@ -13,9 +13,12 @@ const TILE_OFFSET_FACTOR = 0.03;
 const TILE_OFFSET = SKETCH_SIZE * TILE_OFFSET_FACTOR;
 const TILE_SIZE = (SKETCH_SIZE - (GRID_SIZE + 1) * TILE_OFFSET) / GRID_SIZE;
 
-const TEXT_SIZE_SCALE = 0.07;
-const TEXT_SIZE = SKETCH_SIZE * TEXT_SIZE_SCALE;
+const NUM_TEXT_SIZE_SCALE = 0.07;
+const NUM_TEXT_SIZE = SKETCH_SIZE * NUM_TEXT_SIZE_SCALE;
+const SCORE_TEXT_SIZE_SCALE = 0.1;
+const SCORE_TEXT_SIZE = SKETCH_SIZE * SCORE_TEXT_SIZE_SCALE;
 
+const GAMEOVER_BACKGROUND_COLOR = '#0007';
 const BACKGROUND_COLOR = '#BBADA0';
 const TEXT_COLOR = '#FFF';
 const TILE_COLORS: { [key: number]: string } = {
@@ -37,22 +40,35 @@ const DIRECTION_KEY_MAP: { [key: string]: Direction } = {
     'd': 'right' 
 };
 
+const RESTART_KEY = ' ';
+
 type IndexTranslator = (index: number) => number;
 
 let board: number[];
+let score = 0;
+let gameover = false;
 
 function setup() {
     createCanvas(SKETCH_SIZE, SKETCH_SIZE);
-    textSize(TEXT_SIZE);
     textFont(FONT);
+    noStroke();
     reset();
 }
 
 function draw() {
-    noStroke();
+    drawBackground();
+    drawTiles();
+
+    if (gameover)
+        drawGameoverOverlay();
+}
+
+function drawBackground() {
     fill(BACKGROUND_COLOR);
     rect(0, 0, SKETCH_SIZE, SKETCH_SIZE, CORNER_RADIUS);
+}
 
+function drawTiles() {
     board.forEach((val, i) => {
         fill(TILE_COLORS[val] || TILE_COLORS[2048]);
         const row = Math.floor(i / 4);
@@ -63,20 +79,41 @@ function draw() {
 
         if (val != 0) {
             fill(TEXT_COLOR);
+            textSize(NUM_TEXT_SIZE);
             textAlign(CENTER, CENTER);
             text(val.toString(), offsetX + TILE_SIZE / 2, offsetY + TILE_SIZE / 2);
         }
     });
 }
 
+function drawGameoverOverlay() {
+    fill(GAMEOVER_BACKGROUND_COLOR);
+    rect(0, 0, SKETCH_SIZE, SKETCH_SIZE, CORNER_RADIUS);
+
+    fill(TEXT_COLOR);
+    textSize(SCORE_TEXT_SIZE);
+    textAlign(CENTER, CENTER);
+    text(`Score: ${score}`, SKETCH_SIZE / 2, SKETCH_SIZE / 2);
+}
+
 function keyPressed() {
+    if (gameover) {
+        if (key == RESTART_KEY)
+            reset();
+        return;
+    }
+
     if (DIRECTION_KEY_MAP[key]) {
         merge(DIRECTION_KEY_MAP[key]);
-        fillRandomTile();
+        gameover = !(hasFreeTiles() || canMerge());
+        if (hasFreeTiles())
+            fillRandomTile();
     }
 }
 
 function reset() {
+    gameover = false;
+    score = 0;
     generateBoard();
 }
 
@@ -92,6 +129,7 @@ function merge(direction: Direction) {
 function mergeSingle(translator: IndexTranslator) {
     for (let i = 0; i < GRID_SIZE - 1; i++) {
         if (board[translator(i)] == board[translator(i + 1)] && board[translator(i)] != 0) {
+            score += board[translator(i)];
             board[translator(i)] = board[translator(i)] * 2;
             board[translator(i + 1)] = 0;
         }
@@ -122,6 +160,24 @@ function fillRandomTile() {
         boardIndex = floor(random(0, GRID_SIZE * GRID_SIZE));
     } while(board[boardIndex] != 0);
     board[boardIndex] = tileValue;
+}
+
+function hasFreeTiles(): boolean {
+    return board.some(val => val == 0);
+}
+
+function canMerge(): boolean {
+    for (let i = 0; i < GRID_SIZE; i++) {
+        const rowTranslator = getIndexTranslator('left', i);
+        const colTranslator = getIndexTranslator('up', i);
+        for (let j = 0; j < GRID_SIZE - 1; j++) {
+            if ((board[rowTranslator(j)] > 0 && board[rowTranslator(j)] == board[rowTranslator(j + 1)])
+             || (board[colTranslator(j)] > 0 && board[colTranslator(j)] == board[colTranslator(j + 1)])) {
+                return true;
+            }
+        }
+    }
+    return false;
 }
 
 function getIndexTranslator(direction: Direction, indexBase: number): IndexTranslator {
