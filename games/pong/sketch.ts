@@ -49,8 +49,10 @@ const START_KEY = ' ';
 const KEY_UP = 'w';
 const KEY_DOWN = 's';
 
-const PADDLE_SPEED = 0.7;
-const BALL_SPEED = 0.8;
+const SIMULATION_REFERENCE_HEIGHT = 500;
+const SIMULATION_FACTOR = SKETCH_HEIGHT / SIMULATION_REFERENCE_HEIGHT;
+const PADDLE_SPEED = 0.45 * SIMULATION_FACTOR;
+const BALL_SPEED = 0.55 * SIMULATION_FACTOR;
 
 const MAX_BOUNCE_ANGLE = Math.PI / 3;
 const BALL_START_ANGLE_MIN = -Math.PI / 4;
@@ -84,9 +86,9 @@ type ComDifficulty = 'easy' | 'medium' | 'hard';
 const COM_DIFFICULTY: ComDifficulty = 'medium';
 
 const COM_DIFFICULTY_SETTINGS: Map<ComDifficulty, ComConfig> = new Map([
-    ['easy', { reactionTime: { min: 50, max: 150 }, paddleSpeed: 0.4, errorMargin: 0.13 * SKETCH_SIZE }],
-    ['medium', { reactionTime: { min: 150, max: 250 }, paddleSpeed: 0.6, errorMargin: 0.1 * SKETCH_SIZE }],
-    ['hard', { reactionTime: { min: 200, max: 300 }, paddleSpeed: 0.7, errorMargin: 0.02 * SKETCH_SIZE }]
+    ['easy', { reactionTime: { min: 50, max: 150 }, paddleSpeed: 0.25 * SIMULATION_FACTOR, errorMargin: 0.13 * SKETCH_SIZE }],
+    ['medium', { reactionTime: { min: 150, max: 250 }, paddleSpeed: 0.4 * SIMULATION_FACTOR, errorMargin: 0.1 * SKETCH_SIZE }],
+    ['hard', { reactionTime: { min: 200, max: 300 }, paddleSpeed: 0.45 * SIMULATION_FACTOR, errorMargin: 0.02 * SKETCH_SIZE }]
 ]);
 
 let isRunning = false;
