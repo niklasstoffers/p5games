@@ -71,8 +71,8 @@ function drawBackground() {
 function drawTiles() {
     board.forEach((val, i) => {
         fill(TILE_COLORS[val] || TILE_COLORS[2048]);
-        const row = Math.floor(i / 4);
-        const col = i % 4;
+        const row = Math.floor(i / GRID_SIZE);
+        const col = i % GRID_SIZE;
         const offsetX = col * (TILE_SIZE + TILE_OFFSET) + TILE_OFFSET;
         const offsetY = row * (TILE_SIZE + TILE_OFFSET) + TILE_OFFSET;
         rect(offsetX, offsetY, TILE_SIZE, TILE_SIZE, CORNER_RADIUS);
